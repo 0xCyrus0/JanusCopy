@@ -1,0 +1,19 @@
+server:
+  port: ":8080"
+  timeout_seconds: 15
+
+# Security settings
+auth:
+  secret: "SUPER_SECRET_KEY_CHANGE_ME"
+
+# Define your routes here
+routes:
+  - name: "User Service"
+    context_path: "/users"
+    target_url: "https://jsonplaceholder.typicode.com"
+    auth_required: true
+
+  - name: "Public Service"
+    context_path: "/public"
+    target_url: "https://httpbin.org"
+    auth_required: false
