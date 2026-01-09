@@ -18,6 +18,7 @@ type Config struct {
 	RateLimit   RateLimitConfig
 	Cache       CacheConfig
 	Logging     LoggingConfig
+	Database    DatabaseConfig
 }
 
 type ServerConfig struct {
@@ -80,49 +81,67 @@ type LoggingConfig struct {
 	JSONFormat bool
 }
 
+type DatabaseConfig struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
+	Name     string
+	SSL      bool
+}
+
 func Load() (*Config, error) {
+	fmt.Println("---------------[ Load .env ]---------------")
 	cfg := &Config{
-		Environment: getEnv("ENVIRONMENT", "development"),
+		Environment: getEnv("ENVIRONMENT", ""),
 		Server: ServerConfig{
-			Host:         getEnv("SERVER_HOST", "0.0.0.0"),
-			Port:         getEnv("SERVER_PORT", "8080"),
-			ReadTimeout:  getEnvInt("SERVER_READ_TIMEOUT", 15),
-			WriteTimeout: getEnvInt("SERVER_WRITE_TIMEOUT", 15),
-			IdleTimeout:  getEnvInt("SERVER_IDLE_TIMEOUT", 60),
+			Host:         getEnv("SERVER_HOST", ""),
+			Port:         getEnv("SERVER_PORT", ""),
+			ReadTimeout:  getEnvInt("SERVER_READ_TIMEOUT", 0),
+			WriteTimeout: getEnvInt("SERVER_WRITE_TIMEOUT", 0),
+			IdleTimeout:  getEnvInt("SERVER_IDLE_TIMEOUT", 0),
 		},
 		JWT: JWTConfig{
-			SecretKey: getEnv("JWT_SECRET_KEY", "your-secret-key-change-in-production"),
-			Issuer:    getEnv("JWT_ISSUER", "api-gateway"),
-			Audience:  getEnv("JWT_AUDIENCE", "api"),
-			ExpiresIn: getEnvInt("JWT_EXPIRES_IN", 3600),
+			SecretKey: getEnv("JWT_SECRET_KEY", ""),
+			Issuer:    getEnv("JWT_ISSUER", ""),
+			Audience:  getEnv("JWT_AUDIENCE", ""),
+			ExpiresIn: getEnvInt("JWT_EXPIRES_IN", 0),
 		},
 		CORS: CORSConfig{
-			AllowedOrigins:   parseStringSlice(getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:4200")),
-			AllowedMethods:   parseStringSlice(getEnv("CORS_ALLOWED_METHODS", "GET,POST,PUT,DELETE,PATCH,OPTIONS")),
-			AllowedHeaders:   parseStringSlice(getEnv("CORS_ALLOWED_HEADERS", "Content-Type,Authorization")),
-			ExposedHeaders:   parseStringSlice(getEnv("CORS_EXPOSED_HEADERS", "Content-Length,X-Total-Count")),
-			AllowCredentials: getEnvBool("CORS_ALLOW_CREDENTIALS", true),
-			MaxAge:           getEnvInt("CORS_MAX_AGE", 3600),
+			AllowedOrigins:   parseStringSlice(getEnv("CORS_ALLOWED_ORIGINS", "")),
+			AllowedMethods:   parseStringSlice(getEnv("CORS_ALLOWED_METHODS", "")),
+			AllowedHeaders:   parseStringSlice(getEnv("CORS_ALLOWED_HEADERS", "")),
+			ExposedHeaders:   parseStringSlice(getEnv("CORS_EXPOSED_HEADERS", "")),
+			AllowCredentials: getEnvBool("CORS_ALLOW_CREDENTIALS", false),
+			MaxAge:           getEnvInt("CORS_MAX_AGE", 0),
 		},
 		RateLimit: RateLimitConfig{
-			Enabled:           getEnvBool("RATE_LIMIT_ENABLED", true),
-			RequestsPerMinute: getEnvInt("RATE_LIMIT_REQUESTS_PER_MINUTE", 60),
-			BurstSize:         getEnvInt("RATE_LIMIT_BURST_SIZE", 10),
+			Enabled:           getEnvBool("RATE_LIMIT_ENABLED", false),
+			RequestsPerMinute: getEnvInt("RATE_LIMIT_REQUESTS_PER_MINUTE", 0),
+			BurstSize:         getEnvInt("RATE_LIMIT_BURST_SIZE", 0),
 		},
 		Cache: CacheConfig{
 			Enabled: getEnvBool("CACHE_ENABLED", false),
-			TTL:     getEnvInt("CACHE_TTL", 300),
-			MaxSize: getEnvInt("CACHE_MAX_SIZE", 1000),
+			TTL:     getEnvInt("CACHE_TTL", 0),
+			MaxSize: getEnvInt("CACHE_MAX_SIZE", 0),
 			Redis: RedisConfig{
-				Host:     getEnv("REDIS_HOST", "localhost"),
-				Port:     getEnv("REDIS_PORT", "6379"),
+				Host:     getEnv("REDIS_HOST", ""),
+				Port:     getEnv("REDIS_PORT", ""),
 				Password: getEnv("REDIS_PASSWORD", ""),
 				DB:       getEnvInt("REDIS_DB", 0),
 			},
 		},
 		Logging: LoggingConfig{
-			Level:      getEnv("LOG_LEVEL", "info"),
-			JSONFormat: getEnvBool("LOG_JSON_FORMAT", true),
+			Level:      getEnv("LOG_LEVEL", ""),
+			JSONFormat: getEnvBool("LOG_JSON_FORMAT", false),
+		},
+		Database: DatabaseConfig{
+			Host:     getEnv("DATABASE_HOST", ""),
+			Port:     getEnv("DATABASE_PORT", ""),
+			User:     getEnv("DATABASE_USER", ""),
+			Password: getEnv("DATABASE_PASSWORD", ""),
+			Name:     getEnv("DATABASE_NAME", ""),
+			SSL:      getEnvBool("DATABASE_SSL", false),
 		},
 	}
 
@@ -130,7 +149,7 @@ func Load() (*Config, error) {
 	if err := cfg.loadUpstreamServices(); err != nil {
 		return nil, fmt.Errorf("failed to load upstream services: %w", err)
 	}
-
+	println(cfg)
 	return cfg, nil
 }
 
@@ -156,7 +175,7 @@ func (c *Config) loadUpstreamServicesFromEnv() error {
 	// Example: UPSTREAM_SERVICE_0_NAME=api UPSTREAM_SERVICE_0_URL=http://localhost:3000
 	serviceCount := getEnvInt("UPSTREAM_SERVICE_COUNT", 1)
 
-	for i := range serviceCount {
+	for i := 0; i < serviceCount; i++ {
 		prefix := fmt.Sprintf("UPSTREAM_SERVICE_%d_", i)
 		name := getEnv(prefix+"NAME", fmt.Sprintf("service-%d", i))
 		url := getEnv(prefix+"URL", "http://localhost:3000")
@@ -178,6 +197,24 @@ func (c *Config) loadUpstreamServicesFromEnv() error {
 	}
 
 	return nil
+}
+
+// GetDatabaseDSN returns PostgreSQL connection string
+// Format: postgres://user:password@host:port/dbname?sslmode=disable
+func (c *Config) GetDatabaseDSN() string {
+	sslMode := "disable"
+	if c.Database.SSL {
+		sslMode = "require"
+	}
+
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		c.Database.User,
+		c.Database.Password,
+		c.Database.Host,
+		c.Database.Port,
+		c.Database.Name,
+		sslMode,
+	)
 }
 
 func getEnv(key, defaultValue string) string {

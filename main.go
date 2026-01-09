@@ -43,7 +43,7 @@ func main() {
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
-		AppName: "Payment Gateway",
+		AppName: "JanusCopy Gateway",
 		Prefork: cfg.Environment == "production",
 	})
 
