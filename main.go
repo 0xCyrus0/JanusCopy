@@ -57,7 +57,7 @@ func main() {
 	// api.setupRateLimitingRoutes(app, cfg, log)
 	// api.setupCircuitBreakerRoutes(app, cfg, log)
 	// api.setupCachingRoutes(app, cfg, log)
-	// api.setupMonitoringRoutes(app, cfg, log)
+	router.SetupMonitoringRoutes(app, cfg, log)
 	// api.setupMetricsRoutes(app, cfg, log)
 
 	// 404 handler for undefined routes

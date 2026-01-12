@@ -15,10 +15,10 @@ import (
 // SetupRouter initializes the main router with all routes
 func SetupRouter(app *fiber.App, cfg *config.Config, log *zap.Logger, validator *auth.TokenValidator) {
 	// Essential middleware (always enabled)
-	setupCoreMiddleware(app, cfg, log, validator)
+	SetupCoreMiddleware(app, cfg, log, validator)
 
 	// Core routes - forward to NestJS backend
-	setupPublicRoutes(app, cfg, log)
+	SetupPublicRoutes(app, cfg, log)
 
 	// Optional feature routes - add only what you need
 	// setupRateLimitingRoutes(app, cfg, log)
@@ -32,7 +32,7 @@ func SetupRouter(app *fiber.App, cfg *config.Config, log *zap.Logger, validator 
 // CORE - Always enabled (JWT, CORS, Logging)
 // ============================================================================
 
-func setupCoreMiddleware(app *fiber.App, cfg *config.Config, log *zap.Logger, validator *auth.TokenValidator) {
+func SetupCoreMiddleware(app *fiber.App, cfg *config.Config, log *zap.Logger, validator *auth.TokenValidator) {
 	// Recovery from panics
 	app.Use(func(c *fiber.Ctx) error {
 		defer func() {
@@ -76,7 +76,7 @@ func setupCoreMiddleware(app *fiber.App, cfg *config.Config, log *zap.Logger, va
 // CORE ROUTES - Forward to NestJS Backend (:3000)
 // ============================================================================
 
-func setupPublicRoutes(app *fiber.App, cfg *config.Config, log *zap.Logger) {
+func SetupPublicRoutes(app *fiber.App, cfg *config.Config, log *zap.Logger) {
 	nestjsURL := "http://localhost:3000"
 
 	// Health check (no auth required - public)
@@ -101,7 +101,7 @@ func setupPublicRoutes(app *fiber.App, cfg *config.Config, log *zap.Logger) {
 	// Catch-all route - forward everything to NestJS (protected)
 	protected.All("/*", func(c *fiber.Ctx) error {
 		path := c.Path()
-		return forwardRequest(c, nestjsURL, path, log)
+		return ForwardRequest(c, nestjsURL, path, log)
 	})
 }
 
@@ -109,7 +109,7 @@ func setupPublicRoutes(app *fiber.App, cfg *config.Config, log *zap.Logger) {
 // HELPER FUNCTION - Forward requests to NestJS backend
 // ============================================================================
 
-func forwardRequest(c *fiber.Ctx, backendURL string, path string, log *zap.Logger) error {
+func ForwardRequest(c *fiber.Ctx, backendURL string, path string, log *zap.Logger) error {
 	// Create new request to NestJS backend
 	req, err := http.NewRequest(c.Method(), backendURL+path, bytes.NewReader(c.Body()))
 	if err != nil {
@@ -171,25 +171,25 @@ func forwardRequest(c *fiber.Ctx, backendURL string, path string, log *zap.Logge
 // ============================================================================
 
 // setupRateLimitingRoutes adds rate limiting to specific endpoints
-func setupRateLimitingRoutes(app *fiber.App, cfg *config.Config, log *zap.Logger) {
+func SetupRateLimitingRoutes(app *fiber.App, cfg *config.Config, log *zap.Logger) {
 	// Apply rate limiting to high-traffic routes
 	// Example: Rate limit middleware can be added here
 }
 
 // setupCircuitBreakerRoutes adds circuit breaker pattern to critical endpoints
-func setupCircuitBreakerRoutes(app *fiber.App, cfg *config.Config, log *zap.Logger) {
+func SetupCircuitBreakerRoutes(app *fiber.App, cfg *config.Config, log *zap.Logger) {
 	// Apply circuit breaker to external service calls
 	// Example: Circuit breaker middleware can be added here
 }
 
 // setupCachingRoutes adds response caching to read-only endpoints
-func setupCachingRoutes(app *fiber.App, cfg *config.Config, log *zap.Logger) {
+func SetupCachingRoutes(app *fiber.App, cfg *config.Config, log *zap.Logger) {
 	// Cache GET requests for a period
 	// Example: Caching middleware can be added here
 }
 
 // setupMonitoringRoutes adds monitoring/status endpoints
-func setupMonitoringRoutes(app *fiber.App, cfg *config.Config, log *zap.Logger) {
+func SetupMonitoringRoutes(app *fiber.App, cfg *config.Config, log *zap.Logger) {
 	// Health status
 	app.Get("/monitor/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
@@ -216,7 +216,7 @@ func setupMonitoringRoutes(app *fiber.App, cfg *config.Config, log *zap.Logger) 
 }
 
 // setupMetricsRoutes adds Prometheus-style metrics endpoints
-func setupMetricsRoutes(app *fiber.App, cfg *config.Config, log *zap.Logger) {
+func SetupMetricsRoutes(app *fiber.App, cfg *config.Config, log *zap.Logger) {
 	// Prometheus metrics endpoint
 	app.Get("/metrics", func(c *fiber.Ctx) error {
 		return c.SendString("# HELP requests_total Total requests\n# TYPE requests_total counter\nrequests_total 1000\n")

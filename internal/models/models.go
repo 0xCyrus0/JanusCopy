@@ -40,3 +40,11 @@ type ProxyMetrics struct {
 	AverageLatency  time.Duration `json:"average_latency"`
 	Timestamp       time.Time     `json:"timestamp"`
 }
+
+type LogEntry struct {
+	Timestamp time.Time      `json:"timestamp"`
+	Level     string         `json:"level"`
+	AppID     string         `json:"app_id,omitempty"`
+	Message   string         `json:"message"`
+	Fields    map[string]any `json:"fields,omitempty"`
+}
